@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import API from "../config/api";
 const exerciseOptions = {
   Chest: [
     "Bench Press",
@@ -178,7 +178,6 @@ function WorkoutTemplates({ refresh, setRefresh, setActivePage }) {
 
   const userId = storedUser?._id || storedUser?.id;
   const token = localStorage.getItem("token");
-  const API = "http://localhost:5000";
 
   const [templates, setTemplates] = useState([]);
   const [name, setName] = useState("");

@@ -1,5 +1,29 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Home,
+  Dumbbell,
+  Newspaper,
+  Trophy,
+  Bell,
+  User,
+  LogOut,
+  LayoutDashboard,
+  ClipboardList,
+  History,
+  TrendingUp,
+  Flame,
+  Users,
+  Brain,
+  BarChart3,
+  MessageCircle,
+  Award,
+  Bot,
+  X,
+  MoreHorizontal,
+} from "lucide-react";
+import API from "./config/api";
 
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -31,12 +55,7 @@ function App() {
   const [popupNotification, setPopupNotification] = useState(null);
   const [popupLoading, setPopupLoading] = useState(false);
 
-  const API = "http://localhost:5000";
   const SOCKET_URL = "http://localhost:5000";
-
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("theme") || "dark";
-  });
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
@@ -44,16 +63,19 @@ function App() {
   });
 
   const userId = user?._id || user?.id;
+  const getToken = () => localStorage.getItem("token");
+
+  const authHeaders = () => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${getToken()}`,
+  });
 
   useEffect(() => {
     if (!userId) return;
 
     fetchNotificationCount();
 
-    const interval = setInterval(() => {
-      fetchNotificationCount();
-    }, 10000);
-
+    const interval = setInterval(fetchNotificationCount, 10000);
     return () => clearInterval(interval);
   }, [userId, refresh, activePage]);
 
@@ -72,47 +94,34 @@ function App() {
       setRefresh((prev) => prev + 1);
     });
 
-    socket.on("notificationsRead", () => {
-      fetchNotificationCount();
-      setRefresh((prev) => prev + 1);
+    [
+      "notificationsRead",
+      "workoutLogged",
+      "workoutDeleted",
+      "leaderboardUpdated",
+      "feedUpdated",
+      "analyticsUpdated",
+      "socialUpdated",
+      "profileUpdated",
+      "newMessage",
+    ].forEach((eventName) => {
+      socket.on(eventName, () => {
+        fetchNotificationCount();
+        setRefresh((prev) => prev + 1);
+      });
     });
 
-    socket.on("workoutLogged", () => {
-      setRefresh((prev) => prev + 1);
-    });
-
-    socket.on("workoutDeleted", () => {
-      setRefresh((prev) => prev + 1);
-    });
-
-    socket.on("leaderboardUpdated", () => {
-      setRefresh((prev) => prev + 1);
-    });
-
-    socket.on("feedUpdated", () => {
-      setRefresh((prev) => prev + 1);
-    });
-
-    socket.on("analyticsUpdated", () => {
-      setRefresh((prev) => prev + 1);
-    });
-
-    socket.on("socialUpdated", () => {
-      setRefresh((prev) => prev + 1);
-    });
-
-    socket.on("profileUpdated", () => {
-      setRefresh((prev) => prev + 1);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, [userId]);
 
   const fetchNotificationCount = async () => {
     try {
-      const res = await fetch(`${API}/api/users/${userId}/notifications`);
+      const res = await fetch(`${API}/api/users/${userId}/notifications`, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
+      });
+
       const data = await res.json();
 
       if (!Array.isArray(data)) {
@@ -120,8 +129,7 @@ function App() {
         return;
       }
 
-      const unread = data.filter((item) => !item.read).length;
-      setNotificationCount(unread);
+      setNotificationCount(data.filter((item) => !item.read).length);
     } catch (error) {
       console.error("Notification badge error:", error.message);
     }
@@ -129,16 +137,18 @@ function App() {
 
   const fetchLatestPopupNotification = async () => {
     try {
-      const res = await fetch(`${API}/api/users/${userId}/notifications`);
+      const res = await fetch(`${API}/api/users/${userId}/notifications`, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+        },
+      });
+
       const data = await res.json();
 
       if (!Array.isArray(data) || data.length === 0) return;
 
       const latestUnread = data.find((item) => !item.read);
-
-      if (latestUnread) {
-        setPopupNotification(latestUnread);
-      }
+      if (latestUnread) setPopupNotification(latestUnread);
     } catch (error) {
       console.error("Popup notification error:", error.message);
     }
@@ -152,9 +162,7 @@ function App() {
         `${API}/api/users/${userId}/follow-request/${notificationId}`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: authHeaders(),
           body: JSON.stringify({ action }),
         }
       );
@@ -180,6 +188,7 @@ function App() {
     try {
       await fetch(`${API}/api/users/${userId}/notifications/read-all`, {
         method: "PUT",
+        headers: authHeaders(),
       });
 
       setPopupNotification(null);
@@ -189,12 +198,6 @@ function App() {
       console.error("Popup mark read error:", error.message);
       setPopupNotification(null);
     }
-  };
-
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    localStorage.setItem("theme", nextTheme);
   };
 
   const openPage = (pageId) => {
@@ -225,42 +228,41 @@ function App() {
     localStorage.removeItem("completedSets");
     localStorage.removeItem("activeTemplate");
     localStorage.removeItem("requestedFollowIds");
-
     setUser(null);
   };
 
-  if (!user) {
-    return <Auth setUser={setUser} />;
-  }
+  if (!user) return <Auth setUser={setUser} />;
 
   const mainItems = [
-    { id: "dashboard", label: "Home", icon: "🏠" },
-    { id: "log", label: "Log", icon: "🏋️" },
-    { id: "feed", label: "Feed", icon: "📰" },
-    { id: "leaderboard", label: "Rank", icon: "🏆" },
+    { id: "dashboard", label: "Home", icon: Home },
+    { id: "log", label: "Log", icon: Dumbbell },
+    { id: "feed", label: "Feed", icon: Newspaper },
+    { id: "leaderboard", label: "Rank", icon: Trophy },
   ];
 
   const menuItems = [
-    { id: "splits", label: "Workout Splits", icon: "🧩" },
-    { id: "templates", label: "Workout Templates", icon: "🧾" },
-    { id: "history", label: "Workout History", icon: "📋" },
-    { id: "workoutProgress", label: "Workout Progress", icon: "📈" },
-    { id: "streakSystem", label: "Streak System", icon: "🔥" },
-    { id: "gymSocial", label: "Gym Social", icon: "🤝" },
-    { id: "workoutAnalytics", label: "Workout Analytics", icon: "🧠" },
-    { id: "prs", label: "Personal Records", icon: "🔥" },
-    { id: "progress", label: "Progress Charts", icon: "📊" },
-    { id: "social", label: "Friends / Social", icon: "👥" },
-    { id: "messages", label: "Messages", icon: "💬" },
-    { id: "rewards", label: "Rewards / Streaks", icon: "🎖️" },
-    { id: "notifications", label: "Alerts", icon: "🔔" },
-    { id: "ai", label: "AI Recommendations", icon: "🤖" },
-    { id: "profile", label: "Profile", icon: "👤" },
+    { id: "splits", label: "Workout Splits", icon: LayoutDashboard },
+    { id: "templates", label: "Workout Templates", icon: ClipboardList },
+    { id: "history", label: "Workout History", icon: History },
+    { id: "workoutProgress", label: "Workout Progress", icon: TrendingUp },
+    { id: "streakSystem", label: "Streak System", icon: Flame },
+    { id: "gymSocial", label: "Gym Social", icon: Users },
+    { id: "workoutAnalytics", label: "Analytics", icon: Brain },
+    { id: "prs", label: "Personal Records", icon: Flame },
+    { id: "progress", label: "Progress Charts", icon: BarChart3 },
+    { id: "social", label: "Friends", icon: Users },
+    { id: "messages", label: "Messages", icon: MessageCircle },
+    { id: "rewards", label: "Rewards", icon: Award },
+    { id: "notifications", label: "Alerts", icon: Bell },
+    { id: "ai", label: "AI Coach", icon: Bot },
+    { id: "profile", label: "Profile", icon: User },
   ];
+
+  const allItems = [...mainItems, ...menuItems];
 
   const renderPage = () => {
     if (activePage === "dashboard") {
-      return <Dashboard refresh={refresh} />;
+      return <Dashboard refresh={refresh} setActivePage={setActivePage} />;
     }
 
     if (activePage === "log") {
@@ -289,55 +291,24 @@ function App() {
       );
     }
 
-    if (activePage === "history") {
-      return <WorkoutHistory refresh={refresh} />;
-    }
-
-    if (activePage === "workoutProgress") {
+    if (activePage === "history") return <WorkoutHistory refresh={refresh} />;
+    if (activePage === "workoutProgress")
       return <WorkoutProgress refresh={refresh} />;
-    }
-
-    if (activePage === "streakSystem") {
+    if (activePage === "streakSystem")
       return <StreakSystem refresh={refresh} />;
-    }
-
-    if (activePage === "gymSocial") {
+    if (activePage === "gymSocial")
       return <GymSocial refresh={refresh} openProfile={openProfile} />;
-    }
-
-    if (activePage === "workoutAnalytics") {
+    if (activePage === "workoutAnalytics")
       return <WorkoutAnalytics refresh={refresh} />;
-    }
-
-    if (activePage === "prs") {
-      return <PRTracker refresh={refresh} />;
-    }
-
-    if (activePage === "progress") {
-      return <ProgressCharts refresh={refresh} />;
-    }
-
-    if (activePage === "social") {
-      return (
-        <Social
-          refresh={refresh}
-          setRefresh={setRefresh}
-          openProfile={openProfile}
-        />
-      );
-    }
-
-    if (activePage === "feed") {
+    if (activePage === "prs") return <PRTracker refresh={refresh} />;
+    if (activePage === "progress") return <ProgressCharts refresh={refresh} />;
+    if (activePage === "social")
+      return <Social refresh={refresh} openProfile={openProfile} />;
+    if (activePage === "feed")
       return <ActivityFeed refresh={refresh} openProfile={openProfile} />;
-    }
-
-    if (activePage === "messages") {
+    if (activePage === "messages")
       return <Messages refresh={refresh} openProfile={openProfile} />;
-    }
-
-    if (activePage === "rewards") {
-      return <Rewards refresh={refresh} />;
-    }
+    if (activePage === "rewards") return <Rewards refresh={refresh} />;
 
     if (activePage === "notifications") {
       return (
@@ -358,7 +329,8 @@ function App() {
         <UserProfile
           profileUserId={userId}
           refresh={refresh}
-          setRefresh={setRefresh}
+          currentUser={user}
+          openProfile={openProfile}
         />
       );
     }
@@ -368,264 +340,311 @@ function App() {
         <UserProfile
           profileUserId={profileUserId}
           refresh={refresh}
-          setRefresh={setRefresh}
+          currentUser={user}
+          openProfile={openProfile}
         />
       );
     }
 
-    if (activePage === "ai") {
-      return <AIRecommendations refresh={refresh} />;
-    }
+    if (activePage === "ai") return <AIRecommendations refresh={refresh} />;
 
-    return <Dashboard refresh={refresh} />;
+    return <Dashboard refresh={refresh} setActivePage={setActivePage} />;
   };
 
-  const activeLabel =
-    [...mainItems, ...menuItems].find((item) => item.id === activePage)
-      ?.label || "Dashboard";
+  const activeItem =
+    allItems.find((item) => item.id === activePage) || {
+      label: "Dashboard",
+      icon: Home,
+    };
+
+  const ActiveIcon = activeItem.icon;
 
   const isPopupFollowRequest =
-    popupNotification?.type === "follow_request" && !popupNotification?.resolved;
+    popupNotification?.type === "follow_request" &&
+    !popupNotification?.resolved;
 
   return (
-    <div
-      className={`min-h-screen ${
-        theme === "dark"
-          ? "bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white"
-          : "bg-gradient-to-br from-blue-50 via-white to-slate-100 text-slate-900"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 pt-4 pb-28 md:px-8 md:pt-8">
-        <header
-          className={`backdrop-blur-2xl border rounded-3xl p-4 md:p-5 mb-5 shadow-2xl ${
-            theme === "dark"
-              ? "bg-white/10 border-white/10"
-              : "bg-white/90 border-gray-200"
-          }`}
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1
-                className={`text-2xl md:text-4xl font-black tracking-tight ${
-                  theme === "dark" ? "text-white" : "text-slate-900"
-                }`}
-              >
-                Muscle<span className="text-blue-400">Metrics</span>
-              </h1>
-
-              <p
-                className={`text-sm md:text-base mt-1 ${
-                  theme === "dark" ? "text-slate-300" : "text-gray-500"
-                }`}
-              >
-                {activeLabel}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggleTheme}
-                className={`px-4 py-3 rounded-2xl font-black shadow ${
-                  theme === "dark"
-                    ? "bg-white/10 text-white hover:bg-white/20"
-                    : "bg-slate-900 text-white hover:bg-slate-800"
-                }`}
-              >
-                {theme === "dark" ? "☀️" : "🌙"}
-              </button>
-
-              <button
-                onClick={() => setMenuOpen(true)}
-                className="relative px-4 py-3 rounded-2xl font-black shadow bg-blue-600 text-white hover:bg-blue-700"
-              >
-                ☰
-
-                {notificationCount > 0 && (
-                  <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center border-2 border-white">
-                    {notificationCount > 99 ? "99+" : notificationCount}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <main className="bg-white text-slate-900 rounded-3xl shadow-2xl p-4 md:p-8">
-          {renderPage()}
-        </main>
+    <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-emerald-500/20 blur-[130px]" />
+        <div className="absolute right-[-8rem] top-24 h-[30rem] w-[30rem] rounded-full bg-blue-500/20 blur-[140px]" />
+        <div className="absolute bottom-[-10rem] left-1/3 h-[30rem] w-[30rem] rounded-full bg-purple-500/10 blur-[150px]" />
       </div>
 
-      <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
-        <div className="grid grid-cols-4 gap-2 bg-slate-950/95 backdrop-blur-2xl border border-white/10 rounded-3xl p-2 shadow-2xl">
-          {mainItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => openPage(item.id)}
-              className={`py-3 rounded-2xl text-xs font-black transition ${
-                activePage === item.id
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-300 hover:bg-white/10"
-              }`}
-            >
-              <div className="text-lg">{item.icon}</div>
-              <div>{item.label}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+      <motion.button
+        whileHover={{ scale: 1.07 }}
+        whileTap={{ scale: 0.94 }}
+        onClick={() => setMenuOpen(true)}
+        className="fixed top-5 right-5 z-50 h-14 w-14 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-emerald-400 hover:text-black transition font-black flex items-center justify-center"
+      >
+        <MoreHorizontal className="h-7 w-7" />
+        {notificationCount > 0 && (
+          <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center border-2 border-black">
+            {notificationCount > 99 ? "99+" : notificationCount}
+          </span>
+        )}
+      </motion.button>
 
-      <div className="hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 backdrop-blur-2xl border border-white/10 rounded-3xl p-2 shadow-2xl gap-2">
-        {mainItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => openPage(item.id)}
-            className={`px-5 py-3 rounded-2xl font-black transition ${
-              activePage === item.id
-                ? "bg-blue-600 text-white"
-                : "text-slate-300 hover:bg-white/10"
-            }`}
+      <main className="relative z-10 min-h-screen px-3 md:px-6 py-5 pb-28">
+        <section className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="mb-5 rounded-[2rem] bg-white/[0.06] border border-white/10 backdrop-blur-2xl p-5 md:p-7 shadow-2xl"
           >
-            <span className="mr-2">{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {popupNotification && (
-        <div className="fixed top-5 right-5 z-[10000] w-[92%] max-w-md bg-white text-slate-900 border border-gray-200 rounded-[2rem] shadow-2xl p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm text-blue-600 font-black">
-                {isPopupFollowRequest ? "Follow Request" : "New Notification"}
-              </p>
-
-              <h3 className="text-2xl font-black mt-1">
-                {isPopupFollowRequest ? "👤 New Request" : "🔔 Alert"}
-              </h3>
-            </div>
-
-            <button
-              onClick={() => setPopupNotification(null)}
-              className="bg-gray-100 text-gray-700 rounded-xl px-3 py-2 font-black"
-            >
-              ✕
-            </button>
-          </div>
-
-          <p className="text-gray-600 font-semibold mt-3">
-            {popupNotification.message}
-          </p>
-
-          <div className="flex flex-wrap gap-2 mt-5">
-            {popupNotification.fromUserId && (
-              <button
-                onClick={() => {
-                  openProfile(popupNotification.fromUserId);
-                  setPopupNotification(null);
-                }}
-                className="px-5 py-3 rounded-2xl bg-gray-900 text-white font-black hover:bg-gray-800"
-              >
-                View Profile
-              </button>
-            )}
-
-            {isPopupFollowRequest ? (
-              <>
-                <button
-                  disabled={popupLoading}
-                  onClick={() =>
-                    handlePopupFollowRequest(popupNotification._id, "accept")
-                  }
-                  className="px-5 py-3 rounded-2xl bg-green-600 text-white font-black hover:bg-green-700 disabled:opacity-60"
-                >
-                  Accept
-                </button>
-
-                <button
-                  disabled={popupLoading}
-                  onClick={() =>
-                    handlePopupFollowRequest(popupNotification._id, "decline")
-                  }
-                  className="px-5 py-3 rounded-2xl bg-red-500 text-white font-black hover:bg-red-600 disabled:opacity-60"
-                >
-                  Decline
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={markPopupRead}
-                className="px-5 py-3 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700"
-              >
-                Mark Read
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {menuOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
-            onClick={() => setMenuOpen(false)}
-          />
-
-          <div className="fixed right-4 top-4 bottom-4 w-[92%] max-w-md bg-white rounded-3xl shadow-2xl border border-gray-200 p-5 z-[9999] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
               <div>
-                <p className="text-sm text-blue-600 font-black">
-                  MuscleMetrics
+                <p className="text-xs uppercase tracking-[0.25em] text-emerald-400 font-black flex items-center gap-2">
+                  <ActiveIcon className="h-4 w-4" />
+                  {activeItem.label}
                 </p>
 
-                <h3 className="text-3xl font-black text-slate-900">Menu</h3>
+                <h1 className="text-4xl md:text-6xl font-black mt-2 tracking-tight">
+                  Muscle<span className="text-emerald-400">Metrics</span>
+                </h1>
+
+                <p className="text-zinc-400 mt-2 max-w-xl">
+                  Track workouts, compete with friends, and build your fitness
+                  profile.
+                </p>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => openProfile(userId)}
+                className="flex items-center gap-3 rounded-2xl bg-black/30 border border-white/10 px-4 py-3 hover:bg-white/10 transition w-fit"
+              >
+                <img
+                  src={
+                    user?.profilePicture ||
+                    "https://via.placeholder.com/80?text=U"
+                  }
+                  alt="profile"
+                  className="w-11 h-11 rounded-xl object-cover"
+                />
+
+                <div className="text-left">
+                  <p className="text-sm text-zinc-400 font-bold">Profile</p>
+                  <p className="font-black">
+                    {user?.username || user?.name || "Athlete"}
+                  </p>
+                </div>
+              </motion.button>
+            </div>
+          </motion.div>
+
+          <div className="rounded-[2rem] bg-[#111111]/90 border border-white/10 shadow-2xl p-2 md:p-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activePage}
+                initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                className="rounded-[1.5rem] bg-white text-slate-900 min-h-[72vh] p-4 md:p-6"
+              >
+                {renderPage()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </section>
+      </main>
+
+      <motion.div
+        initial={{ opacity: 0, y: 25 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="fixed bottom-4 left-4 right-4 z-50"
+      >
+        <div className="max-w-2xl mx-auto grid grid-cols-4 gap-2 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-2 shadow-2xl">
+          {mainItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.94 }}
+                key={item.id}
+                onClick={() => openPage(item.id)}
+                className={`py-3 rounded-2xl text-xs font-black transition ${
+                  activePage === item.id
+                    ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20"
+                    : "text-zinc-300 hover:bg-white/10"
+                }`}
+              >
+                <Icon className="h-5 w-5 mx-auto mb-1" />
+                <div>{item.label}</div>
+              </motion.button>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {popupNotification && (
+          <motion.div
+            initial={{ opacity: 0, x: -35, scale: 0.96 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -35, scale: 0.96 }}
+            transition={{ duration: 0.25 }}
+            className="fixed top-5 left-5 z-[10000] w-[92%] max-w-md bg-[#181818] text-white border border-white/10 rounded-[2rem] shadow-2xl p-5"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm text-emerald-400 font-black">
+                  {isPopupFollowRequest ? "Follow Request" : "New Notification"}
+                </p>
+
+                <h3 className="text-2xl font-black mt-1">
+                  {isPopupFollowRequest ? "New Request" : "Alert"}
+                </h3>
               </div>
 
               <button
-                onClick={() => setMenuOpen(false)}
-                className="bg-gray-100 px-4 py-2 rounded-xl font-black text-slate-900"
+                onClick={() => setPopupNotification(null)}
+                className="bg-white/10 text-white rounded-xl px-3 py-2 font-black"
               >
-                ✕
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              {menuItems.map((item) => (
+            <p className="text-zinc-300 font-semibold mt-3">
+              {popupNotification.message}
+            </p>
+
+            <div className="flex flex-wrap gap-2 mt-5">
+              {popupNotification.fromUserId && (
                 <button
-                  key={item.id}
-                  onClick={() => openPage(item.id)}
-                  className={`text-left p-4 rounded-2xl font-black border transition flex items-center justify-between ${
-                    activePage === item.id
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-                  }`}
+                  onClick={() => {
+                    openProfile(popupNotification.fromUserId);
+                    setPopupNotification(null);
+                  }}
+                  className="px-5 py-3 rounded-2xl bg-white text-black font-black hover:bg-zinc-200"
                 >
-                  <span>
-                    <span className="mr-2">{item.icon}</span>
-                    {item.label}
-                  </span>
-
-                  <span className="flex items-center gap-2">
-                    {item.id === "notifications" && notificationCount > 0 && (
-                      <span className="min-w-[24px] h-[24px] px-2 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center">
-                        {notificationCount > 99 ? "99+" : notificationCount}
-                      </span>
-                    )}
-
-                    {activePage === item.id && <span>✓</span>}
-                  </span>
+                  View Profile
                 </button>
-              ))}
+              )}
 
-              <button
-                onClick={handleLogout}
-                className="text-left p-4 rounded-2xl font-black border bg-red-50 text-red-600 border-red-100 hover:bg-red-100 mt-3"
-              >
-                🚪 Logout
-              </button>
+              {isPopupFollowRequest ? (
+                <>
+                  <button
+                    disabled={popupLoading}
+                    onClick={() =>
+                      handlePopupFollowRequest(popupNotification._id, "accept")
+                    }
+                    className="px-5 py-3 rounded-2xl bg-emerald-400 text-black font-black hover:bg-emerald-300 disabled:opacity-60"
+                  >
+                    Accept
+                  </button>
+
+                  <button
+                    disabled={popupLoading}
+                    onClick={() =>
+                      handlePopupFollowRequest(popupNotification._id, "decline")
+                    }
+                    className="px-5 py-3 rounded-2xl bg-red-500 text-white font-black hover:bg-red-600 disabled:opacity-60"
+                  >
+                    Decline
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={markPopupRead}
+                  className="px-5 py-3 rounded-2xl bg-emerald-400 text-black font-black hover:bg-emerald-300"
+                >
+                  Mark Read
+                </button>
+              )}
             </div>
-          </div>
-        </>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[9998]"
+              onClick={() => setMenuOpen(false)}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="fixed right-4 top-4 bottom-4 w-[92%] max-w-md bg-[#121212] text-white rounded-[2rem] shadow-2xl border border-white/10 p-5 z-[9999] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className="text-sm text-emerald-400 font-black">
+                    MuscleMetrics
+                  </p>
+                  <h3 className="text-3xl font-black">Menu</h3>
+                </div>
+
+                <button
+                  onClick={() => setMenuOpen(false)}
+                  className="bg-white/10 px-4 py-2 rounded-xl font-black"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {allItems.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      key={item.id}
+                      onClick={() => openPage(item.id)}
+                      className={`text-left p-4 rounded-2xl font-black border transition flex items-center justify-between ${
+                        activePage === item.id
+                          ? "bg-emerald-400 text-black border-emerald-400"
+                          : "bg-white/5 text-zinc-200 border-white/10 hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" />
+                        {item.label}
+                      </span>
+
+                      {item.id === "notifications" &&
+                        notificationCount > 0 && (
+                          <span className="min-w-[24px] h-[24px] px-2 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center">
+                            {notificationCount > 99
+                              ? "99+"
+                              : notificationCount}
+                          </span>
+                        )}
+                    </motion.button>
+                  );
+                })}
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleLogout}
+                  className="text-left p-4 rounded-2xl font-black border bg-red-500/10 text-red-300 border-red-500/20 hover:bg-red-500 hover:text-white mt-3"
+                >
+                  <span className="flex items-center gap-3">
+                    <LogOut className="h-5 w-5" />
+                    Logout
+                  </span>
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

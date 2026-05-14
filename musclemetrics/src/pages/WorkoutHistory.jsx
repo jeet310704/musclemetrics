@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import API from "../config/api";
 
 function WorkoutHistory({ refresh }) {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -11,7 +12,7 @@ function WorkoutHistory({ refresh }) {
         const userId = user?.id || user?._id;
 
         const response = await fetch(
-          `http://localhost:5000/api/workouts/user/${userId}`
+          `${API}/api/workouts/user/${userId}`
         );
 
         const data = await response.json();

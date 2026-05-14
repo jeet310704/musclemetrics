@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import API from "../config/api";
 
 function Social({
   refresh,
@@ -10,7 +11,6 @@ function Social({
 
   const userId = storedUser?._id || storedUser?.id;
 
-  const API = "http://localhost:5000";
 
   const getToken = () => localStorage.getItem("token");
 

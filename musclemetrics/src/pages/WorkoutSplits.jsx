@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-
+import API from "../config/api";
 const exerciseLibrary = {
   Chest: [
     "Bench Press",
@@ -107,7 +107,6 @@ function WorkoutSplits({ refresh, setRefresh, setActivePage }) {
 
   const userId = user?._id || user?.id;
 
-  const API = "http://localhost:5000";
 
   useEffect(() => {
     fetchSplits();

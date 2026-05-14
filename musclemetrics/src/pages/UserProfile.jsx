@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-
+import API from "../config/api";
 function UserProfile({
   profileUserId,
   refresh,
@@ -12,7 +12,6 @@ function UserProfile({
 
   const myUserId = storedUser?._id || storedUser?.id;
 
-  const API = "http://localhost:5000";
 
   const getToken = () => localStorage.getItem("token");
 

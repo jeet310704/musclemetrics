@@ -1,4 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import API from "../config/api";
+
+const cardMotion = {
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.28, ease: "easeOut" },
+};
+
+const listMotion = (index = 0) => ({
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.22, delay: index * 0.03 },
+});
 
 const exerciseOptions = {
   Chest: [
@@ -177,7 +191,6 @@ function LogWorkout({ onWorkoutAdded }) {
   }
 
   const userId = storedUser?._id || storedUser?.id;
-  const API = "http://localhost:5000";
   const timerRef = useRef(null);
 
   const [activeTemplateName, setActiveTemplateName] = useState("");
@@ -300,7 +313,14 @@ function LogWorkout({ onWorkoutAdded }) {
 
   const fetchPreviousWorkouts = async () => {
     try {
-      const res = await fetch(`${API}/api/workouts/user/${userId}`);
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API}/api/workouts/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       const data = await res.json();
       setPreviousWorkouts(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -588,7 +608,6 @@ function LogWorkout({ onWorkoutAdded }) {
             : 0;
 
         const payload = {
-          userId,
           splitId: null,
           splitName: activeTemplateName || "No Split",
           exercise: item.exercise,
@@ -604,16 +623,16 @@ function LogWorkout({ onWorkoutAdded }) {
           duration: 1,
         };
 
-       const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token");
 
-const res = await fetch(`${API}/api/workouts`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify(payload),
-});
+        const res = await fetch(`${API}/api/workouts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
 
         const data = await res.json();
 
@@ -643,11 +662,14 @@ const res = await fetch(`${API}/api/workouts`, {
     }
   };
 
-  if (!userId) return <div>Please login first.</div>;
+    if (!userId) return <div>Please login first.</div>;
 
   return (
     <div className="space-y-6 pb-24">
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 p-6 md:p-8 text-white shadow-2xl">
+      <motion.section
+        {...cardMotion}
+        className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 p-6 md:p-8 text-white shadow-2xl"
+      >
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-500/30 blur-3xl" />
         <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-purple-500/20 blur-3xl" />
 
@@ -664,31 +686,50 @@ const res = await fetch(`${API}/api/workouts`, {
               you train.
             </p>
 
-            {activeTemplateName && (
-              <div className="mt-5 inline-flex flex-col md:flex-row md:items-center gap-3 bg-white/10 border border-white/10 rounded-2xl px-5 py-4">
-                <div>
-                  <p className="text-sm text-blue-200 font-bold">
-                    Active Template
-                  </p>
-                  <p className="text-2xl font-black">{activeTemplateName}</p>
-                </div>
-
-                <button
-                  onClick={clearTemplate}
-                  className="bg-white text-red-600 px-4 py-2 rounded-xl font-black hover:bg-red-50"
+            <AnimatePresence>
+              {activeTemplateName && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  className="mt-5 inline-flex flex-col md:flex-row md:items-center gap-3 bg-white/10 border border-white/10 rounded-2xl px-5 py-4"
                 >
-                  Clear
-                </button>
-              </div>
-            )}
+                  <div>
+                    <p className="text-sm text-blue-200 font-bold">
+                      Active Template
+                    </p>
+                    <p className="text-2xl font-black">
+                      {activeTemplateName}
+                    </p>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={clearTemplate}
+                    className="bg-white text-red-600 px-4 py-2 rounded-xl font-black hover:bg-red-50"
+                  >
+                    Clear
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          <div className="bg-white/10 border border-white/10 rounded-[2rem] p-5 backdrop-blur-xl">
+          <motion.div
+            whileHover={{ scale: 1.015 }}
+            className="bg-white/10 border border-white/10 rounded-[2rem] p-5 backdrop-blur-xl"
+          >
             <p className="text-blue-200 font-bold">Rest Timer</p>
 
-            <p className="text-6xl font-black text-center my-5">
+            <motion.p
+              key={restSeconds}
+              initial={{ scale: 0.96, opacity: 0.7 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-6xl font-black text-center my-5"
+            >
               {formatRestTime(restSeconds)}
-            </p>
+            </motion.p>
 
             <p
               className={`text-center font-black ${
@@ -700,7 +741,9 @@ const res = await fetch(`${API}/api/workouts`, {
 
             <div className="grid grid-cols-3 gap-2 mt-5">
               {[60, 90, 120].map((seconds) => (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.95 }}
                   key={seconds}
                   onClick={() => {
                     setRestPreset(seconds);
@@ -713,63 +756,65 @@ const res = await fetch(`${API}/api/workouts`, {
                   }`}
                 >
                   {seconds}s
-                </button>
+                </motion.button>
               ))}
             </div>
 
             <div className="grid grid-cols-3 gap-2 mt-3">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => startRestTimer(restSeconds || restPreset)}
                 className="bg-green-500 text-white py-3 rounded-xl font-black"
               >
                 Start
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={pauseRestTimer}
                 className="bg-white/10 text-white py-3 rounded-xl font-black"
               >
                 Pause
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => resetRestTimer(restPreset)}
                 className="bg-red-500/90 text-white py-3 rounded-xl font-black"
               >
                 Reset
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-3xl border bg-white p-5 shadow">
-          <p className="text-gray-500 text-sm font-bold">Exercises</p>
-          <p className="text-4xl font-black mt-1">{exercises.length}</p>
-        </div>
-
-        <div className="rounded-3xl border bg-white p-5 shadow">
-          <p className="text-gray-500 text-sm font-bold">Sets Done</p>
-          <p className="text-4xl font-black mt-1">
-            {completedSets}/{totalSets}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border bg-white p-5 shadow">
-          <p className="text-gray-500 text-sm font-bold">Volume</p>
-          <p className="text-4xl font-black mt-1">
-            {totalVolume.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border bg-white p-5 shadow">
-          <p className="text-gray-500 text-sm font-bold">Live PRs</p>
-          <p className="text-4xl font-black mt-1">{prResults.length}</p>
-        </div>
+        {[
+          ["Exercises", exercises.length],
+          ["Sets Done", `${completedSets}/${totalSets}`],
+          ["Volume", totalVolume.toLocaleString()],
+          ["Live PRs", prResults.length],
+        ].map(([label, value], index) => (
+          <motion.div
+            key={label}
+            {...listMotion(index)}
+            whileHover={{ scale: 1.03, y: -4 }}
+            className="rounded-3xl border bg-white p-5 shadow"
+          >
+            <p className="text-gray-500 text-sm font-bold">{label}</p>
+            <p className="text-4xl font-black mt-1">{value}</p>
+          </motion.div>
+        ))}
       </section>
 
-      <section className="bg-white border rounded-[2rem] p-5 shadow-xl">
+      <motion.section
+        {...cardMotion}
+        className="bg-white border rounded-[2rem] p-5 shadow-xl"
+      >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
           <div>
             <h2 className="text-3xl font-black">Workout Builder</h2>
@@ -778,12 +823,14 @@ const res = await fetch(`${API}/api/workouts`, {
             </p>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             onClick={addExercise}
             className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black hover:bg-slate-800"
           >
             + Add Exercise
-          </button>
+          </motion.button>
         </div>
 
         <div className="relative mb-6">
@@ -798,231 +845,281 @@ const res = await fetch(`${API}/api/workouts`, {
             className="mt-1 w-full p-4 rounded-2xl bg-gray-100 border outline-none focus:border-blue-500"
           />
 
-          {filteredExercises.length > 0 && (
-            <div className="absolute left-0 right-0 top-[76px] bg-white border rounded-2xl shadow-2xl z-20 overflow-hidden">
-              {filteredExercises.map((item) => (
-                <button
-                  key={`${item.muscleGroup}-${item.exercise}`}
-                  onClick={() => addExerciseFromSearch(item)}
-                  className="w-full text-left p-3 hover:bg-gray-100 flex items-center justify-between"
-                >
-                  <span className="font-bold">{item.exercise}</span>
-                  <span className="text-sm text-gray-500">
-                    {item.muscleGroup}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+          <AnimatePresence>
+            {filteredExercises.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                className="absolute left-0 right-0 top-[76px] bg-white border rounded-2xl shadow-2xl z-20 overflow-hidden"
+              >
+                {filteredExercises.map((item, index) => (
+                  <motion.button
+                    {...listMotion(index)}
+                    key={`${item.muscleGroup}-${item.exercise}`}
+                    onClick={() => addExerciseFromSearch(item)}
+                    className="w-full text-left p-3 hover:bg-gray-100 flex items-center justify-between"
+                  >
+                    <span className="font-bold">{item.exercise}</span>
+                    <span className="text-sm text-gray-500">
+                      {item.muscleGroup}
+                    </span>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="space-y-5">
-          {exercises.map((item, exerciseIndex) => (
-            <div
-              key={exerciseIndex}
-              className="rounded-[2rem] border bg-gray-50 p-4 md:p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3 mb-5">
-                <div>
-                  <p className="text-sm text-gray-500 font-black">
-                    Exercise {exerciseIndex + 1}
-                  </p>
+          <AnimatePresence>
+            {exercises.map((item, exerciseIndex) => (
+              <motion.div
+                key={`${item.exercise}-${exerciseIndex}`}
+                layout
+                initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -14, scale: 0.98 }}
+                whileHover={{ scale: 1.005 }}
+                transition={{ duration: 0.22 }}
+                className="rounded-[2rem] border bg-gray-50 p-4 md:p-5 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3 mb-5">
+                  <div>
+                    <p className="text-sm text-gray-500 font-black">
+                      Exercise {exerciseIndex + 1}
+                    </p>
 
-                  <h3 className="text-2xl font-black mt-1">
-                    {item.exercise || "New Exercise"}
-                  </h3>
+                    <h3 className="text-2xl font-black mt-1">
+                      {item.exercise || "New Exercise"}
+                    </h3>
 
-                  <p className="text-sm text-gray-500">{item.muscleGroup}</p>
+                    <p className="text-sm text-gray-500">{item.muscleGroup}</p>
+                  </div>
+
+                  {exercises.length > 1 && (
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => removeExercise(exerciseIndex)}
+                      className="bg-red-100 text-red-600 px-4 py-2 rounded-xl font-black hover:bg-red-200"
+                    >
+                      Remove
+                    </motion.button>
+                  )}
                 </div>
 
-                {exercises.length > 1 && (
-                  <button
-                    onClick={() => removeExercise(exerciseIndex)}
-                    className="bg-red-100 text-red-600 px-4 py-2 rounded-xl font-black hover:bg-red-200"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+                  <div>
+                    <label className="text-xs text-gray-500 font-bold">
+                      Muscle Group
+                    </label>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-                <div>
-                  <label className="text-xs text-gray-500 font-bold">
-                    Muscle Group
-                  </label>
-
-                  <select
-                    value={item.muscleGroup}
-                    onChange={(e) =>
-                      updateExercise(
-                        exerciseIndex,
-                        "muscleGroup",
-                        e.target.value
-                      )
-                    }
-                    className="mt-1 w-full p-3 rounded-xl bg-white border outline-none focus:border-blue-500"
-                  >
-                    {Object.keys(exerciseOptions).map((group) => (
-                      <option key={group} value={group}>
-                        {group}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs text-gray-500 font-bold">
-                    Exercise Name
-                  </label>
-
-                  <select
-                    value={item.exercise}
-                    onChange={(e) =>
-                      updateExercise(exerciseIndex, "exercise", e.target.value)
-                    }
-                    className="mt-1 w-full p-3 rounded-xl bg-white border outline-none focus:border-blue-500"
-                  >
-                    {(exerciseOptions[item.muscleGroup] || []).map(
-                      (exercise) => (
-                        <option key={exercise} value={exercise}>
-                          {exercise}
+                    <select
+                      value={item.muscleGroup}
+                      onChange={(e) =>
+                        updateExercise(
+                          exerciseIndex,
+                          "muscleGroup",
+                          e.target.value
+                        )
+                      }
+                      className="mt-1 w-full p-3 rounded-xl bg-white border outline-none focus:border-blue-500"
+                    >
+                      {Object.keys(exerciseOptions).map((group) => (
+                        <option key={group} value={group}>
+                          {group}
                         </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-500 font-bold">
+                      Exercise Name
+                    </label>
+
+                    <select
+                      value={item.exercise}
+                      onChange={(e) =>
+                        updateExercise(
+                          exerciseIndex,
+                          "exercise",
+                          e.target.value
+                        )
+                      }
+                      className="mt-1 w-full p-3 rounded-xl bg-white border outline-none focus:border-blue-500"
+                    >
+                      {(exerciseOptions[item.muscleGroup] || []).map(
+                        (exercise) => (
+                          <option key={exercise} value={exercise}>
+                            {exercise}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-white border rounded-2xl overflow-hidden">
+                  <div className="grid grid-cols-5 gap-2 bg-gray-100 p-3 text-xs font-black text-gray-500">
+                    <p>Done</p>
+                    <p>Set</p>
+                    <p>Reps</p>
+                    <p>Weight</p>
+                    <p>Action</p>
+                  </div>
+
+                  <AnimatePresence>
+                    {(Array.isArray(item.sets) ? item.sets : []).map(
+                      (set, setIndex) => (
+                        <motion.div
+                          key={setIndex}
+                          layout
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          className={`grid grid-cols-5 gap-2 p-3 border-t items-center ${
+                            set.completed ? "bg-green-50" : "bg-white"
+                          }`}
+                        >
+                          <motion.button
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.92 }}
+                            onClick={() =>
+                              toggleSetComplete(exerciseIndex, setIndex)
+                            }
+                            className={`w-9 h-9 rounded-xl font-black ${
+                              set.completed
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
+                          >
+                            {set.completed ? "✓" : ""}
+                          </motion.button>
+
+                          <p className="font-black">Set {setIndex + 1}</p>
+
+                          <input
+                            type="number"
+                            min="0"
+                            value={set.reps}
+                            onChange={(e) =>
+                              updateSet(
+                                exerciseIndex,
+                                setIndex,
+                                "reps",
+                                e.target.value
+                              )
+                            }
+                            className="p-2 rounded-xl bg-gray-100 outline-none"
+                          />
+
+                          <input
+                            type="number"
+                            min="0"
+                            value={set.weight}
+                            onChange={(e) =>
+                              updateSet(
+                                exerciseIndex,
+                                setIndex,
+                                "weight",
+                                e.target.value
+                              )
+                            }
+                            className="p-2 rounded-xl bg-gray-100 outline-none"
+                          />
+
+                          <button
+                            onClick={() => removeSet(exerciseIndex, setIndex)}
+                            className="bg-red-100 text-red-600 rounded-xl px-3 py-2 font-bold"
+                          >
+                            Remove
+                          </button>
+                        </motion.div>
                       )
                     )}
-                  </select>
-                </div>
-              </div>
-
-              <div className="bg-white border rounded-2xl overflow-hidden">
-                <div className="grid grid-cols-5 gap-2 bg-gray-100 p-3 text-xs font-black text-gray-500">
-                  <p>Done</p>
-                  <p>Set</p>
-                  <p>Reps</p>
-                  <p>Weight</p>
-                  <p>Action</p>
+                  </AnimatePresence>
                 </div>
 
-                {(Array.isArray(item.sets) ? item.sets : []).map(
-                  (set, setIndex) => (
-                    <div
-                      key={setIndex}
-                      className={`grid grid-cols-5 gap-2 p-3 border-t items-center ${
-                        set.completed ? "bg-green-50" : "bg-white"
-                      }`}
-                    >
-                      <button
-                        onClick={() =>
-                          toggleSetComplete(exerciseIndex, setIndex)
-                        }
-                        className={`w-9 h-9 rounded-xl font-black ${
-                          set.completed
-                            ? "bg-green-600 text-white"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {set.completed ? "✓" : ""}
-                      </button>
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => addSet(exerciseIndex)}
+                    className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-black hover:bg-blue-200"
+                  >
+                    + Add Set
+                  </motion.button>
 
-                      <p className="font-black">Set {setIndex + 1}</p>
-
-                      <input
-                        type="number"
-                        min="0"
-                        value={set.reps}
-                        onChange={(e) =>
-                          updateSet(
-                            exerciseIndex,
-                            setIndex,
-                            "reps",
-                            e.target.value
-                          )
-                        }
-                        className="p-2 rounded-xl bg-gray-100 outline-none"
-                      />
-
-                      <input
-                        type="number"
-                        min="0"
-                        value={set.weight}
-                        onChange={(e) =>
-                          updateSet(
-                            exerciseIndex,
-                            setIndex,
-                            "weight",
-                            e.target.value
-                          )
-                        }
-                        className="p-2 rounded-xl bg-gray-100 outline-none"
-                      />
-
-                      <button
-                        onClick={() => removeSet(exerciseIndex, setIndex)}
-                        className="bg-red-100 text-red-600 rounded-xl px-3 py-2 font-bold"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                <button
-                  onClick={() => addSet(exerciseIndex)}
-                  className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-black hover:bg-blue-200"
-                >
-                  + Add Set
-                </button>
-
-                <div className="bg-white border rounded-2xl px-4 py-2">
-                  <p className="text-xs text-gray-500 font-bold">
-                    Exercise Volume
-                  </p>
-                  <p className="text-xl font-black">
-                    {getExerciseVolume(item).toLocaleString()}
-                  </p>
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    className="bg-white border rounded-2xl px-4 py-2"
+                  >
+                    <p className="text-xs text-gray-500 font-bold">
+                      Exercise Volume
+                    </p>
+                    <p className="text-xl font-black">
+                      {getExerciseVolume(item).toLocaleString()}
+                    </p>
+                  </motion.div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {prResults.length > 0 && (
-        <section className="bg-yellow-50 border border-yellow-200 rounded-[2rem] p-5 shadow">
-          <h2 className="text-2xl font-black text-yellow-700">
-            Live PRs Detected 🏆
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-            {prResults.map((pr, index) => (
-              <div
-                key={`${pr.exercise}-${pr.type}-${index}`}
-                className="bg-white border rounded-2xl p-4"
-              >
-                <p className="font-black">{pr.type}</p>
-                <p className="text-gray-700">{pr.exercise}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Old: {Number(pr.oldValue || 0).toLocaleString()} {pr.unit}
-                </p>
-                <p className="font-black">
-                  New: {Number(pr.newValue || 0).toLocaleString()} {pr.unit}
-                </p>
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
-      )}
+          </AnimatePresence>
+        </div>
+      </motion.section>
 
-      <div className="fixed bottom-24 left-4 right-4 z-40 md:static md:z-auto">
-        <button
+      <AnimatePresence>
+        {prResults.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.98 }}
+            className="bg-yellow-50 border border-yellow-200 rounded-[2rem] p-5 shadow"
+          >
+            <h2 className="text-2xl font-black text-yellow-700">
+              Live PRs Detected 🏆
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+              {prResults.map((pr, index) => (
+                <motion.div
+                  key={`${pr.exercise}-${pr.type}-${index}`}
+                  {...listMotion(index)}
+                  whileHover={{ scale: 1.03 }}
+                  className="bg-white border rounded-2xl p-4"
+                >
+                  <p className="font-black">{pr.type}</p>
+                  <p className="text-gray-700">{pr.exercise}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Old: {Number(pr.oldValue || 0).toLocaleString()} {pr.unit}
+                  </p>
+                  <p className="font-black">
+                    New: {Number(pr.newValue || 0).toLocaleString()} {pr.unit}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="fixed bottom-24 left-4 right-4 z-40 md:static md:z-auto"
+      >
+        <motion.button
+          whileHover={{ scale: 1.015 }}
+          whileTap={{ scale: 0.97 }}
           onClick={saveWorkout}
           disabled={loading}
           className="w-full px-8 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 disabled:opacity-60 shadow-2xl"
         >
           {loading ? "Saving..." : "Finish & Save Workout"}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     </div>
   );
 }

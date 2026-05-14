@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import API from "../config/api";
 function Rewards({ refresh }) {
   let storedUser = null;
 
@@ -14,7 +14,6 @@ function Rewards({ refresh }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const API = "http://localhost:5000";
 
   useEffect(() => {
     if (userId) {

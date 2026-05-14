@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import API from "../config/api";
 
 function Leaderboard({ refresh, openProfile }) {
   const [activeTab, setActiveTab] = useState("weekly");
@@ -10,7 +11,6 @@ function Leaderboard({ refresh, openProfile }) {
   });
   const [loading, setLoading] = useState(false);
 
-  const API = "http://localhost:5000";
 
   useEffect(() => {
     fetchLeaderboard();

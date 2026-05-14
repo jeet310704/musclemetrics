@@ -1,5 +1,6 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import API from "../config/api";
 
 function Auth({ setUser }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,7 +20,7 @@ function Auth({ setUser }) {
       : { name, username, email, password };
 
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+      const response = await fetch(`${API}/api/auth/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

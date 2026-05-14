@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import API from "../config/api";
 function WorkoutAnalytics({ refresh }) {
   let storedUser = null;
 
@@ -15,7 +15,6 @@ function WorkoutAnalytics({ refresh }) {
   const [activeTab, setActiveTab] = useState("muscles");
   const [loading, setLoading] = useState(false);
 
-  const API = "http://localhost:5000";
 
   useEffect(() => {
     if (userId) fetchAnalytics();

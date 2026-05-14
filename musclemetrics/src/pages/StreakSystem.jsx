@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import API from "../config/api";
 
 function StreakSystem({ refresh }) {
   let storedUser = null;
@@ -14,7 +15,6 @@ function StreakSystem({ refresh }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const API = "http://localhost:5000";
 
   useEffect(() => {
     if (userId) fetchStreaks();

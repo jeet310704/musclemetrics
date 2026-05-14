@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import API from "../config/api";
 
 function AIRecommendations({ refresh }) {
   let storedUser = null;
@@ -10,8 +11,7 @@ function AIRecommendations({ refresh }) {
   }
 
   const userId = storedUser?._id || storedUser?.id;
-  const API = "http://localhost:5000";
-
+  
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 

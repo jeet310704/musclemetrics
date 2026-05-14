@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-
+import API from "../config/api";
 function ActivityFeed({ refresh, openProfile }) {
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const userId = user?._id || user?.id;
-  const API = "http://localhost:5000";
+  
 
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);

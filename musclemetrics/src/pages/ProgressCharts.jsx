@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
+import API from "../config/api";
 
 function ProgressCharts({ refresh }) {
   const [workouts, setWorkouts] = useState([]);
@@ -18,7 +19,7 @@ function ProgressCharts({ refresh }) {
       try {
         const user = JSON.parse(localStorage.getItem("user"));
 
-        const response = await fetch("http://localhost:5000/api/workouts");
+        const response = await fetch(`${API}/api/workouts`);
         const data = await response.json();
 
         const userWorkouts = Array.isArray(data)

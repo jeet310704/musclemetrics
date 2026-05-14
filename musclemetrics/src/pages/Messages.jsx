@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import API from "../config/api";
 
 function Messages({ refresh, openProfile }) {
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");
   const userId = storedUser?._id || storedUser?.id;
-  const API = "http://localhost:5000";
 
   const bottomRef = useRef(null);
 

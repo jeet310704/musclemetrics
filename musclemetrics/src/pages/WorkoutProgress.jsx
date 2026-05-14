@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import API from "../config/api";
 function WorkoutProgress({ refresh }) {
   let storedUser = null;
 
@@ -15,7 +15,6 @@ function WorkoutProgress({ refresh }) {
   const [selectedExercise, setSelectedExercise] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const API = "http://localhost:5000";
 
   useEffect(() => {
     if (userId) fetchProgress();
