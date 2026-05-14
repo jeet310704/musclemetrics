@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
 
 function Social({
   refresh,

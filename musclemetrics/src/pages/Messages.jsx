@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
 
 function Messages({ refresh, openProfile }) {
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");

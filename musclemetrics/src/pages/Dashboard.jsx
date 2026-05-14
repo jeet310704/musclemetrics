@@ -10,7 +10,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { CardSkeleton, ListSkeleton } from "../components/Skeleton";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
 
 function Dashboard({ refresh, setActivePage }) {
   const user = JSON.parse(localStorage.getItem("user") || "null");

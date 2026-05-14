@@ -9,7 +9,6 @@ import {
   Bell,
   User,
   LogOut,
-  LayoutDashboard,
   ClipboardList,
   History,
   TrendingUp,
@@ -23,13 +22,12 @@ import {
   X,
   MoreHorizontal,
 } from "lucide-react";
-import API from "./config/api";
+import API, { apiFetch } from "./config/api";
 
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import LogWorkout from "./pages/LogWorkout";
 import WorkoutHistory from "./pages/WorkoutHistory";
-import WorkoutSplits from "./pages/WorkoutSplits";
 import WorkoutTemplates from "./pages/WorkoutTemplates";
 import WorkoutProgress from "./pages/WorkoutProgress";
 import StreakSystem from "./pages/StreakSystem";
@@ -46,6 +44,9 @@ import AIRecommendations from "./pages/AIRecommendations";
 import Messages from "./pages/Messages";
 import Rewards from "./pages/Rewards";
 
+const fallbackAvatar =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='100%25' height='100%25' fill='%23111827'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='44' fill='white'%3EU%3C/text%3E%3C/svg%3E";
+
 function App() {
   const [activePage, setActivePage] = useState("dashboard");
   const [refresh, setRefresh] = useState(0);
@@ -54,8 +55,6 @@ function App() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [popupNotification, setPopupNotification] = useState(null);
   const [popupLoading, setPopupLoading] = useState(false);
-
-  const SOCKET_URL = "http://localhost:5000";
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("user");
@@ -82,8 +81,8 @@ function App() {
   useEffect(() => {
     if (!userId) return;
 
-    const socket = io(SOCKET_URL, {
-      transports: ["websocket", "polling"],
+    const socket = io(API, {
+      transports: ["polling", "websocket"],
     });
 
     socket.emit("joinUserRoom", userId);
@@ -116,7 +115,7 @@ function App() {
 
   const fetchNotificationCount = async () => {
     try {
-      const res = await fetch(`${API}/api/users/${userId}/notifications`, {
+      const res = await apiFetch(`/api/users/${userId}/notifications`, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
@@ -137,7 +136,7 @@ function App() {
 
   const fetchLatestPopupNotification = async () => {
     try {
-      const res = await fetch(`${API}/api/users/${userId}/notifications`, {
+      const res = await apiFetch(`/api/users/${userId}/notifications`, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
@@ -158,8 +157,8 @@ function App() {
     try {
       setPopupLoading(true);
 
-      const res = await fetch(
-        `${API}/api/users/${userId}/follow-request/${notificationId}`,
+      const res = await apiFetch(
+        `/api/users/${userId}/follow-request/${notificationId}`,
         {
           method: "PUT",
           headers: authHeaders(),
@@ -186,7 +185,7 @@ function App() {
 
   const markPopupRead = async () => {
     try {
-      await fetch(`${API}/api/users/${userId}/notifications/read-all`, {
+      await apiFetch(`/api/users/${userId}/notifications/read-all`, {
         method: "PUT",
         headers: authHeaders(),
       });
@@ -241,9 +240,8 @@ function App() {
   ];
 
   const menuItems = [
-    { id: "splits", label: "Workout Splits", icon: LayoutDashboard },
-    { id: "templates", label: "Workout Templates", icon: ClipboardList },
-    { id: "history", label: "Workout History", icon: History },
+    { id: "templates", label: "Templates", icon: ClipboardList },
+    { id: "history", label: "History", icon: History },
     { id: "workoutProgress", label: "Workout Progress", icon: TrendingUp },
     { id: "streakSystem", label: "Streak System", icon: Flame },
     { id: "gymSocial", label: "Gym Social", icon: Users },
@@ -268,16 +266,6 @@ function App() {
     if (activePage === "log") {
       return (
         <LogWorkout onWorkoutAdded={() => setRefresh((prev) => prev + 1)} />
-      );
-    }
-
-    if (activePage === "splits") {
-      return (
-        <WorkoutSplits
-          refresh={refresh}
-          setRefresh={setRefresh}
-          setActivePage={setActivePage}
-        />
       );
     }
 
@@ -375,9 +363,9 @@ function App() {
         whileHover={{ scale: 1.07 }}
         whileTap={{ scale: 0.94 }}
         onClick={() => setMenuOpen(true)}
-        className="fixed top-5 right-5 z-50 h-14 w-14 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-emerald-400 hover:text-black transition font-black flex items-center justify-center"
+        className="fixed top-3 right-3 md:top-5 md:right-5 z-50 h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-emerald-400 hover:text-black transition font-black flex items-center justify-center"
       >
-        <MoreHorizontal className="h-7 w-7" />
+        <MoreHorizontal className="h-6 w-6 md:h-7 md:w-7" />
         {notificationCount > 0 && (
           <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center border-2 border-black">
             {notificationCount > 99 ? "99+" : notificationCount}
@@ -385,26 +373,26 @@ function App() {
         )}
       </motion.button>
 
-      <main className="relative z-10 min-h-screen px-3 md:px-6 py-5 pb-28">
+      <main className="relative z-10 min-h-screen px-2 sm:px-4 md:px-6 py-3 md:py-5 pb-32">
         <section className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="mb-5 rounded-[2rem] bg-white/[0.06] border border-white/10 backdrop-blur-2xl p-5 md:p-7 shadow-2xl"
+            className="mb-4 md:mb-5 rounded-3xl md:rounded-[2rem] bg-white/[0.06] border border-white/10 backdrop-blur-2xl p-4 md:p-7 shadow-2xl"
           >
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-5 pr-12 md:pr-0">
               <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-emerald-400 font-black flex items-center gap-2">
+                <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] md:tracking-[0.25em] text-emerald-400 font-black flex items-center gap-2">
                   <ActiveIcon className="h-4 w-4" />
                   {activeItem.label}
                 </p>
 
-                <h1 className="text-4xl md:text-6xl font-black mt-2 tracking-tight">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl font-black mt-2 tracking-tight">
                   Muscle<span className="text-emerald-400">Metrics</span>
                 </h1>
 
-                <p className="text-zinc-400 mt-2 max-w-xl">
+                <p className="text-zinc-400 mt-2 max-w-xl text-sm md:text-base">
                   Track workouts, compete with friends, and build your fitness
                   profile.
                 </p>
@@ -414,20 +402,19 @@ function App() {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => openProfile(userId)}
-                className="flex items-center gap-3 rounded-2xl bg-black/30 border border-white/10 px-4 py-3 hover:bg-white/10 transition w-fit"
+                className="flex items-center gap-3 rounded-2xl bg-black/30 border border-white/10 px-3 md:px-4 py-3 hover:bg-white/10 transition w-fit"
               >
                 <img
-                  src={
-                    user?.profilePicture ||
-                    "https://via.placeholder.com/80?text=U"
-                  }
+                  src={user?.profilePicture || fallbackAvatar}
                   alt="profile"
-                  className="w-11 h-11 rounded-xl object-cover"
+                  className="w-10 h-10 md:w-11 md:h-11 rounded-xl object-cover"
                 />
 
                 <div className="text-left">
-                  <p className="text-sm text-zinc-400 font-bold">Profile</p>
-                  <p className="font-black">
+                  <p className="text-xs md:text-sm text-zinc-400 font-bold">
+                    Profile
+                  </p>
+                  <p className="font-black text-sm md:text-base">
                     {user?.username || user?.name || "Athlete"}
                   </p>
                 </div>
@@ -435,7 +422,7 @@ function App() {
             </div>
           </motion.div>
 
-          <div className="rounded-[2rem] bg-[#111111]/90 border border-white/10 shadow-2xl p-2 md:p-4">
+          <div className="rounded-3xl md:rounded-[2rem] bg-[#111111]/90 border border-white/10 shadow-2xl p-1.5 md:p-4">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activePage}
@@ -443,7 +430,7 @@ function App() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -12, scale: 0.98 }}
                 transition={{ duration: 0.28, ease: "easeOut" }}
-                className="rounded-[1.5rem] bg-white text-slate-900 min-h-[72vh] p-4 md:p-6"
+                className="rounded-3xl md:rounded-[1.5rem] bg-white text-slate-900 min-h-[72vh] p-3 sm:p-4 md:p-6 overflow-x-hidden"
               >
                 {renderPage()}
               </motion.div>
@@ -456,9 +443,9 @@ function App() {
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="fixed bottom-4 left-4 right-4 z-50"
+        className="fixed bottom-3 left-2 right-2 sm:left-4 sm:right-4 z-50"
       >
-        <div className="max-w-2xl mx-auto grid grid-cols-4 gap-2 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-2 shadow-2xl">
+        <div className="max-w-2xl mx-auto grid grid-cols-4 gap-1.5 sm:gap-2 bg-black/85 backdrop-blur-2xl border border-white/10 rounded-3xl md:rounded-[2rem] p-1.5 sm:p-2 shadow-2xl">
           {mainItems.map((item) => {
             const Icon = item.icon;
 
@@ -468,7 +455,7 @@ function App() {
                 whileTap={{ scale: 0.94 }}
                 key={item.id}
                 onClick={() => openPage(item.id)}
-                className={`py-3 rounded-2xl text-xs font-black transition ${
+                className={`py-2.5 sm:py-3 rounded-2xl text-[11px] sm:text-xs font-black transition ${
                   activePage === item.id
                     ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20"
                     : "text-zinc-300 hover:bg-white/10"
@@ -489,7 +476,7 @@ function App() {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -35, scale: 0.96 }}
             transition={{ duration: 0.25 }}
-            className="fixed top-5 left-5 z-[10000] w-[92%] max-w-md bg-[#181818] text-white border border-white/10 rounded-[2rem] shadow-2xl p-5"
+            className="fixed top-3 left-3 right-3 md:top-5 md:left-5 md:right-auto z-[10000] md:w-[92%] md:max-w-md bg-[#181818] text-white border border-white/10 rounded-[2rem] shadow-2xl p-4 md:p-5"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -497,7 +484,7 @@ function App() {
                   {isPopupFollowRequest ? "Follow Request" : "New Notification"}
                 </p>
 
-                <h3 className="text-2xl font-black mt-1">
+                <h3 className="text-xl md:text-2xl font-black mt-1">
                   {isPopupFollowRequest ? "New Request" : "Alert"}
                 </h3>
               </div>
@@ -510,7 +497,7 @@ function App() {
               </button>
             </div>
 
-            <p className="text-zinc-300 font-semibold mt-3">
+            <p className="text-zinc-300 font-semibold mt-3 text-sm md:text-base">
               {popupNotification.message}
             </p>
 
@@ -521,7 +508,7 @@ function App() {
                     openProfile(popupNotification.fromUserId);
                     setPopupNotification(null);
                   }}
-                  className="px-5 py-3 rounded-2xl bg-white text-black font-black hover:bg-zinc-200"
+                  className="px-4 md:px-5 py-3 rounded-2xl bg-white text-black font-black hover:bg-zinc-200"
                 >
                   View Profile
                 </button>
@@ -534,7 +521,7 @@ function App() {
                     onClick={() =>
                       handlePopupFollowRequest(popupNotification._id, "accept")
                     }
-                    className="px-5 py-3 rounded-2xl bg-emerald-400 text-black font-black hover:bg-emerald-300 disabled:opacity-60"
+                    className="px-4 md:px-5 py-3 rounded-2xl bg-emerald-400 text-black font-black hover:bg-emerald-300 disabled:opacity-60"
                   >
                     Accept
                   </button>
@@ -544,7 +531,7 @@ function App() {
                     onClick={() =>
                       handlePopupFollowRequest(popupNotification._id, "decline")
                     }
-                    className="px-5 py-3 rounded-2xl bg-red-500 text-white font-black hover:bg-red-600 disabled:opacity-60"
+                    className="px-4 md:px-5 py-3 rounded-2xl bg-red-500 text-white font-black hover:bg-red-600 disabled:opacity-60"
                   >
                     Decline
                   </button>
@@ -552,7 +539,7 @@ function App() {
               ) : (
                 <button
                   onClick={markPopupRead}
-                  className="px-5 py-3 rounded-2xl bg-emerald-400 text-black font-black hover:bg-emerald-300"
+                  className="px-4 md:px-5 py-3 rounded-2xl bg-emerald-400 text-black font-black hover:bg-emerald-300"
                 >
                   Mark Read
                 </button>
@@ -578,14 +565,14 @@ function App() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="fixed right-4 top-4 bottom-4 w-[92%] max-w-md bg-[#121212] text-white rounded-[2rem] shadow-2xl border border-white/10 p-5 z-[9999] overflow-y-auto"
+              className="fixed right-2 top-2 bottom-2 md:right-4 md:top-4 md:bottom-4 w-[94%] max-w-md bg-[#121212] text-white rounded-[2rem] shadow-2xl border border-white/10 p-4 md:p-5 z-[9999] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <p className="text-sm text-emerald-400 font-black">
                     MuscleMetrics
                   </p>
-                  <h3 className="text-3xl font-black">Menu</h3>
+                  <h3 className="text-2xl md:text-3xl font-black">Menu</h3>
                 </div>
 
                 <button
@@ -596,7 +583,7 @@ function App() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-2.5 md:gap-3">
                 {allItems.map((item) => {
                   const Icon = item.icon;
 
@@ -606,13 +593,13 @@ function App() {
                       whileTap={{ scale: 0.98 }}
                       key={item.id}
                       onClick={() => openPage(item.id)}
-                      className={`text-left p-4 rounded-2xl font-black border transition flex items-center justify-between ${
+                      className={`text-left p-3.5 md:p-4 rounded-2xl font-black border transition flex items-center justify-between ${
                         activePage === item.id
                           ? "bg-emerald-400 text-black border-emerald-400"
                           : "bg-white/5 text-zinc-200 border-white/10 hover:bg-white/10"
                       }`}
                     >
-                      <span className="flex items-center gap-3">
+                      <span className="flex items-center gap-3 text-sm md:text-base">
                         <Icon className="h-5 w-5" />
                         {item.label}
                       </span>
@@ -633,7 +620,7 @@ function App() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleLogout}
-                  className="text-left p-4 rounded-2xl font-black border bg-red-500/10 text-red-300 border-red-500/20 hover:bg-red-500 hover:text-white mt-3"
+                  className="text-left p-3.5 md:p-4 rounded-2xl font-black border bg-red-500/10 text-red-300 border-red-500/20 hover:bg-red-500 hover:text-white mt-3"
                 >
                   <span className="flex items-center gap-3">
                     <LogOut className="h-5 w-5" />

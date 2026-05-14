@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
 const exerciseLibrary = {
   Chest: [
     "Bench Press",

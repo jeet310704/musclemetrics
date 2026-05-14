@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
 function UserProfile({
   profileUserId,
   refresh,

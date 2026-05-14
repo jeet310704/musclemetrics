@@ -1,137 +1,157 @@
-import { useEffect, useState } from "react";
-import API from "../config/api";
+import { useEffect, useMemo, useState } from "react";
+import { Trophy, Dumbbell, TrendingUp } from "lucide-react";
+import API, { apiFetch } from "../config/api";
+import { ListSkeleton } from "../components/Skeleton";
 
 function PRTracker({ refresh }) {
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const userId = user?._id || user?.id;
+
   const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchWorkouts = async () => {
-      try {
-        const user = JSON.parse(localStorage.getItem("user"));
+    if (userId) fetchWorkouts();
+  }, [userId, refresh]);
 
-        const response = await fetch(`${API}/api/workouts`);
-        const data = await response.json();
+  const fetchWorkouts = async () => {
+    try {
+      setLoading(true);
 
-        const userWorkouts = Array.isArray(data)
-          ? data.filter((w) => w.userId?._id === user.id || w.userId === user.id)
-          : [];
+      const token = localStorage.getItem("token");
 
-        setWorkouts(userWorkouts);
-      } catch (error) {
-        console.error("Error fetching PR data:", error);
+      const res = await apiFetch("/api/workouts/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error(data.message || "Could not load PRs.");
+        setWorkouts([]);
+        return;
       }
-    };
 
-    fetchWorkouts();
-  }, [refresh]);
-
-  const groupedPRs = {};
-
-  workouts.forEach((workout) => {
-    const exercise = workout.exercise;
-
-    if (!groupedPRs[exercise]) {
-      groupedPRs[exercise] = {
-        exercise,
-        bestWeight: workout.weight || 0,
-        bestVolume: workout.volume || 0,
-        bestPoints: workout.points || 0,
-        bestWeightWorkout: workout,
-        bestVolumeWorkout: workout,
-        bestPointsWorkout: workout,
-      };
+      setWorkouts(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("PR fetch error:", error.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (Number(workout.weight || 0) > groupedPRs[exercise].bestWeight) {
-      groupedPRs[exercise].bestWeight = workout.weight;
-      groupedPRs[exercise].bestWeightWorkout = workout;
-    }
+  const records = useMemo(() => {
+    const map = {};
 
-    if (Number(workout.volume || 0) > groupedPRs[exercise].bestVolume) {
-      groupedPRs[exercise].bestVolume = workout.volume;
-      groupedPRs[exercise].bestVolumeWorkout = workout;
-    }
+    workouts.forEach((workout) => {
+      const name = workout.exercise || "Unknown Exercise";
+      const weight = Number(workout.weight || 0);
+      const volume = Number(workout.volume || 0);
 
-    if (Number(workout.points || 0) > groupedPRs[exercise].bestPoints) {
-      groupedPRs[exercise].bestPoints = workout.points;
-      groupedPRs[exercise].bestPointsWorkout = workout;
-    }
-  });
+      if (!map[name]) {
+        map[name] = {
+          exercise: name,
+          muscleGroup: workout.muscleGroup || "Other",
+          bestWeight: weight,
+          bestVolume: volume,
+          date: workout.createdAt,
+        };
+      } else {
+        if (weight > map[name].bestWeight) map[name].bestWeight = weight;
+        if (volume > map[name].bestVolume) map[name].bestVolume = volume;
+      }
+    });
 
-  const prList = Object.values(groupedPRs).sort(
-    (a, b) => b.bestPoints - a.bestPoints
-  );
+    return Object.values(map).sort((a, b) => b.bestWeight - a.bestWeight);
+  }, [workouts]);
+
+  if (!userId) return <div>Please login first.</div>;
 
   return (
-    <div>
-      <div className="mb-8">
-        <p className="text-blue-600 font-semibold text-sm">Progress Records</p>
-        <h2 className="text-4xl font-black tracking-tight">Personal Records</h2>
-        <p className="text-gray-500 mt-2">
-          Track your strongest lifts, best volume, and highest workout scores.
+    <div className="space-y-6">
+      <section className="rounded-[2rem] bg-gradient-to-br from-yellow-500 via-orange-600 to-red-600 p-6 md:p-8 text-white shadow-2xl">
+        <p className="text-white/80 font-black">Strength Records</p>
+        <h1 className="text-4xl md:text-6xl font-black mt-2">
+          Personal Records
+        </h1>
+        <p className="text-white/90 mt-3">
+          Your strongest lifts and highest workout volume by exercise.
         </p>
-      </div>
+      </section>
 
-      {prList.length === 0 ? (
-        <p className="text-gray-500">
-          No PRs yet. Log workouts to start tracking records.
-        </p>
-      ) : (
-        <div className="grid lg:grid-cols-2 gap-5">
-          {prList.map((pr) => (
-            <div
-              key={pr.exercise}
-              className="bg-gray-50 border border-gray-200 rounded-3xl p-6 shadow-sm"
-            >
-              <h3 className="text-2xl font-black mb-1">{pr.exercise}</h3>
-
-              <p className="text-sm text-gray-500 mb-5">
-                {pr.bestWeightWorkout?.muscleGroup || "Unknown Muscle Group"}
-              </p>
-
-              <div className="grid md:grid-cols-3 gap-3">
-                <div className="bg-blue-100 text-blue-700 rounded-2xl p-4">
-                  <p className="text-sm font-bold">Heaviest Lift</p>
-                  <p className="text-2xl font-black mt-1">
-                    {pr.bestWeight} lbs
-                  </p>
-                </div>
-
-                <div className="bg-purple-100 text-purple-700 rounded-2xl p-4">
-                  <p className="text-sm font-bold">Best Volume</p>
-                  <p className="text-2xl font-black mt-1">
-                    {pr.bestVolume}
-                  </p>
-                </div>
-
-                <div className="bg-green-100 text-green-700 rounded-2xl p-4">
-                  <p className="text-sm font-bold">Best Score</p>
-                  <p className="text-2xl font-black mt-1">
-                    {pr.bestPoints} pts
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 bg-white border border-gray-200 rounded-2xl p-4">
-                <p className="font-black mb-2">Latest PR Details</p>
-
-                <p className="text-sm text-gray-600">
-                  Best score workout: {pr.bestPointsWorkout?.sets} sets •{" "}
-                  {pr.bestPointsWorkout?.reps} reps •{" "}
-                  {pr.bestPointsWorkout?.weight} lbs
-                </p>
-
-                <p className="text-sm text-gray-500 mt-1">
-                  Date:{" "}
-                  {pr.bestPointsWorkout?.createdAt
-                    ? new Date(pr.bestPointsWorkout.createdAt).toLocaleDateString()
-                    : "Unknown"}
-                </p>
-              </div>
-            </div>
-          ))}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white border rounded-[2rem] p-5 shadow">
+          <Trophy className="h-8 w-8 text-yellow-600 mb-3" />
+          <p className="text-gray-500 font-bold">Tracked PRs</p>
+          <p className="text-4xl font-black">{records.length}</p>
         </div>
-      )}
+
+        <div className="bg-white border rounded-[2rem] p-5 shadow">
+          <Dumbbell className="h-8 w-8 text-slate-900 mb-3" />
+          <p className="text-gray-500 font-bold">Best Lift</p>
+          <p className="text-4xl font-black">
+            {records[0]?.bestWeight || 0} lbs
+          </p>
+        </div>
+
+        <div className="bg-white border rounded-[2rem] p-5 shadow">
+          <TrendingUp className="h-8 w-8 text-green-600 mb-3" />
+          <p className="text-gray-500 font-bold">Workout Logs</p>
+          <p className="text-4xl font-black">{workouts.length}</p>
+        </div>
+      </section>
+
+      <section className="bg-white border rounded-[2rem] p-5 shadow-xl">
+        <h2 className="text-3xl font-black mb-5">PR Board</h2>
+
+        {loading ? (
+          <ListSkeleton rows={5} />
+        ) : records.length === 0 ? (
+          <div className="bg-gray-50 border rounded-[2rem] p-10 text-center">
+            <Trophy className="h-14 w-14 mx-auto text-gray-400 mb-3" />
+            <h3 className="text-2xl font-black">No PRs yet</h3>
+            <p className="text-gray-500 mt-2">
+              Log workouts to start building your record board.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {records.map((record, index) => (
+              <div
+                key={record.exercise}
+                className="bg-gray-50 border rounded-[2rem] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div>
+                  <p className="text-sm text-gray-500 font-black">
+                    #{index + 1} • {record.muscleGroup}
+                  </p>
+                  <h3 className="text-2xl font-black">{record.exercise}</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+                  <div className="bg-white border rounded-2xl p-3 text-center">
+                    <p className="text-xs text-gray-500 font-bold">
+                      Best Weight
+                    </p>
+                    <p className="font-black">{record.bestWeight} lbs</p>
+                  </div>
+
+                  <div className="bg-white border rounded-2xl p-3 text-center">
+                    <p className="text-xs text-gray-500 font-bold">
+                      Best Volume
+                    </p>
+                    <p className="font-black">
+                      {Number(record.bestVolume || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

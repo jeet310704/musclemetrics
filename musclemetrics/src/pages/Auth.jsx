@@ -1,6 +1,6 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
 
 function Auth({ setUser }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -20,7 +20,7 @@ function Auth({ setUser }) {
       : { name, username, email, password };
 
     try {
-      const response = await fetch(`${API}/api/auth/${endpoint}`, {
+      const response = await apiFetch(`/api/auth/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -39,6 +39,7 @@ function Auth({ setUser }) {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       setUser(data.user);
+
       toast.success(isLogin ? "Logged in!" : "Account created!");
     } catch (error) {
       console.error(error);
@@ -54,6 +55,7 @@ function Auth({ setUser }) {
             <h1 className="text-5xl font-black">
               Muscle<span className="text-blue-200">Metrics</span>
             </h1>
+
             <p className="mt-4 text-blue-100 text-lg">
               Track workouts, monitor progress, and compete with friends.
             </p>
@@ -62,6 +64,7 @@ function Auth({ setUser }) {
           <div className="space-y-4">
             <div className="bg-white/10 p-5 rounded-2xl backdrop-blur">
               <p className="font-bold">🏆 Social Leaderboards</p>
+
               <p className="text-blue-100 text-sm">
                 Add friends and compete on workout points.
               </p>
@@ -69,6 +72,7 @@ function Auth({ setUser }) {
 
             <div className="bg-white/10 p-5 rounded-2xl backdrop-blur">
               <p className="font-bold">🔥 PR Tracking</p>
+
               <p className="text-blue-100 text-sm">
                 Track personal records and progress over time.
               </p>
@@ -130,12 +134,14 @@ function Auth({ setUser }) {
             required
           />
 
-          <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl font-bold shadow-xl">
+          <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl font-bold shadow-xl hover:scale-[1.01] transition">
             {isLogin ? "Login" : "Create Account"}
           </button>
 
           <p className="text-center mt-6 text-sm text-gray-500">
-            {isLogin ? "Don’t have an account?" : "Already have an account?"}{" "}
+            {isLogin
+              ? "Don’t have an account?"
+              : "Already have an account?"}{" "}
             <button
               type="button"
               className="text-blue-600 font-bold"

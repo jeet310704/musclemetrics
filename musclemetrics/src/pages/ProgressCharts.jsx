@@ -8,7 +8,8 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
 
 function ProgressCharts({ refresh }) {
   const [workouts, setWorkouts] = useState([]);

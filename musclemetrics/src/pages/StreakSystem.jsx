@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
 
 function StreakSystem({ refresh }) {
   let storedUser = null;

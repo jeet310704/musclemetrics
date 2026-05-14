@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
 
 const cardMotion = {
   initial: { opacity: 0, y: 18 },

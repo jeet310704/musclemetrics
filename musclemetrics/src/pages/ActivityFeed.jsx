@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import API from "../config/api";
+import API, { apiFetch } from "../config/api";
+
+
 function ActivityFeed({ refresh, openProfile }) {
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const userId = user?._id || user?.id;
