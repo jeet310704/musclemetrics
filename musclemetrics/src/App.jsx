@@ -436,6 +436,9 @@ function App() {
               </motion.div>
             </AnimatePresence>
           </div>
+          <footer className="text-center text-zinc-500 text-xs md:text-sm py-8 pb-24">
+  © {new Date().getFullYear()} MuscleMetrics — Built by Jeet
+</footer>
         </section>
       </main>
 
@@ -632,9 +635,6 @@ function App() {
           </>
         )}
       </AnimatePresence>
-      <footer className="text-center text-zinc-500 text-xs md:text-sm py-6">
-  © {new Date().getFullYear()} MuscleMetrics — Built by Jeet
-</footer>
     </div>
   );
 }
