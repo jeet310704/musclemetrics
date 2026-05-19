@@ -632,6 +632,9 @@ function App() {
           </>
         )}
       </AnimatePresence>
+      <footer className="text-center text-zinc-500 text-xs md:text-sm py-6">
+  © {new Date().getFullYear()} MuscleMetrics — Built by Jeet
+</footer>
     </div>
   );
 }
