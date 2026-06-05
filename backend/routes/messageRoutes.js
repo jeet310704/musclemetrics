@@ -34,17 +34,19 @@ router.get("/chats/:userId", protect, async (req, res) => {
     const userId = req.user._id;
 
     const messages = await Message.find({
-      $or: [{ senderId: userId }, { receiverId: userId }],
+      $or: [{ sender: userId }, { receiver: userId }],
     })
-      .populate("senderId", "name username email profilePicture")
-      .populate("receiverId", "name username email profilePicture")
+      .populate("sender", "name username email profilePicture")
+      .populate("receiver", "name username email profilePicture")
       .sort({ createdAt: -1 });
 
     const chatMap = new Map();
 
     messages.forEach((message) => {
-      const sender = message.senderId;
-      const receiver = message.receiverId;
+      const sender = message.sender;
+      const receiver = message.receiver;
+
+      if (!sender || !receiver) return;
 
       const otherUser =
         String(sender._id) === String(userId) ? receiver : sender;
@@ -54,7 +56,7 @@ router.get("/chats/:userId", protect, async (req, res) => {
       if (!chatMap.has(String(otherUser._id))) {
         chatMap.set(String(otherUser._id), {
           user: otherUser,
-          lastMessage: message.text || message.message || "",
+          lastMessage: message.text || "",
           lastMessageAt: message.createdAt,
         });
       }
@@ -77,12 +79,12 @@ router.get("/conversation/:userId/:otherUserId", protect, async (req, res) => {
 
     const messages = await Message.find({
       $or: [
-        { senderId: userId, receiverId: otherUserId },
-        { senderId: otherUserId, receiverId: userId },
+        { sender: userId, receiver: otherUserId },
+        { sender: otherUserId, receiver: userId },
       ],
     })
-      .populate("senderId", "name username email profilePicture")
-      .populate("receiverId", "name username email profilePicture")
+      .populate("sender", "name username email profilePicture")
+      .populate("receiver", "name username email profilePicture")
       .sort({ createdAt: 1 });
 
     res.json(messages);
@@ -107,15 +109,14 @@ router.post("/send", protect, async (req, res) => {
     }
 
     const savedMessage = await Message.create({
-      senderId,
-      receiverId,
+      sender: senderId,
+      receiver: receiverId,
       text: text || message,
-      message: text || message,
     });
 
     const populatedMessage = await Message.findById(savedMessage._id)
-      .populate("senderId", "name username email profilePicture")
-      .populate("receiverId", "name username email profilePicture");
+      .populate("sender", "name username email profilePicture")
+      .populate("receiver", "name username email profilePicture");
 
     const io = req.app.get("io");
 
@@ -151,10 +152,9 @@ router.post("/", protect, async (req, res) => {
     }
 
     const savedMessage = await Message.create({
-      senderId,
-      receiverId,
+      sender: senderId,
+      receiver: receiverId,
       text: text || message,
-      message: text || message,
     });
 
     res.status(201).json(savedMessage);

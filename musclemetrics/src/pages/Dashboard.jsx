@@ -10,13 +10,11 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { CardSkeleton, ListSkeleton } from "../components/Skeleton";
-import API, { apiFetch } from "../config/api";
+import API from "../config/api";
 
 function Dashboard({ refresh, setActivePage }) {
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const userId = user?._id || user?.id;
-  
-
   const getToken = () => localStorage.getItem("token");
 
   const [workouts, setWorkouts] = useState([]);
@@ -29,21 +27,11 @@ function Dashboard({ refresh, setActivePage }) {
   const fetchWorkouts = async () => {
     try {
       setLoading(true);
-
       const res = await fetch(`${API}/api/workouts/me`, {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        console.error(data.message || "Could not load workouts.");
-        setWorkouts([]);
-        return;
-      }
-
+      if (!res.ok) { setWorkouts([]); return; }
       setWorkouts(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Dashboard workouts error:", error.message);
@@ -55,92 +43,49 @@ function Dashboard({ refresh, setActivePage }) {
   const todayKey = new Date().toISOString().split("T")[0];
 
   const stats = useMemo(() => {
-    const todayWorkouts = workouts.filter((item) => {
-      return new Date(item.createdAt).toISOString().split("T")[0] === todayKey;
-    });
-
-    const totalVolume = workouts.reduce(
-      (sum, item) => sum + Number(item.volume || 0),
-      0
+    const todayWorkouts = workouts.filter(
+      (item) => new Date(item.createdAt).toISOString().split("T")[0] === todayKey
     );
-
-    const totalPoints = workouts.reduce(
-      (sum, item) => sum + Number(item.points || 0),
-      0
-    );
-
-    const todayVolume = todayWorkouts.reduce(
-      (sum, item) => sum + Number(item.volume || 0),
-      0
-    );
-
+    const totalVolume = workouts.reduce((sum, item) => sum + Number(item.volume || 0), 0);
+    const totalPoints = workouts.reduce((sum, item) => sum + Number(item.points || 0), 0);
+    const todayVolume = todayWorkouts.reduce((sum, item) => sum + Number(item.volume || 0), 0);
     const muscleMap = workouts.reduce((acc, item) => {
       const muscle = item.muscleGroup || "Other";
       acc[muscle] = (acc[muscle] || 0) + 1;
       return acc;
     }, {});
-
     const favoriteMuscle =
-      Object.entries(muscleMap).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-      "No data";
-
-    const bestLift = workouts.reduce((best, item) => {
-      const weight = Number(item.weight || 0);
-      return weight > Number(best.weight || 0) ? item : best;
-    }, {});
-
-    return {
-      totalWorkouts: workouts.length,
-      todayWorkouts: todayWorkouts.length,
-      totalVolume,
-      totalPoints,
-      todayVolume,
-      favoriteMuscle,
-      bestLift,
-    };
+      Object.entries(muscleMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "No data";
+    const bestLift = workouts.reduce(
+      (best, item) => (Number(item.weight || 0) > Number(best.weight || 0) ? item : best),
+      {}
+    );
+    return { totalWorkouts: workouts.length, todayWorkouts: todayWorkouts.length, totalVolume, totalPoints, todayVolume, favoriteMuscle, bestLift };
   }, [workouts, todayKey]);
 
   const recentWorkouts = workouts.slice(0, 6);
 
   const statCards = [
-    {
-      label: "Today",
-      value: stats.todayWorkouts,
-      sub: "workouts logged",
-      icon: Zap,
-    },
-    {
-      label: "Total Workouts",
-      value: stats.totalWorkouts,
-      sub: "all time",
-      icon: Dumbbell,
-    },
-    {
-      label: "Total Volume",
-      value: Number(stats.totalVolume || 0).toLocaleString(),
-      sub: "lbs moved",
-      icon: TrendingUp,
-    },
-    {
-      label: "Points",
-      value: stats.totalPoints,
-      sub: "earned",
-      icon: Flame,
-    },
+    { label: "Today", value: stats.todayWorkouts, sub: "workouts", icon: Zap, color: "emerald" },
+    { label: "All Time", value: stats.totalWorkouts, sub: "workouts", icon: Dumbbell, color: "blue" },
+    { label: "Volume", value: Number(stats.totalVolume || 0).toLocaleString(), sub: "lbs lifted", icon: TrendingUp, color: "purple" },
+    { label: "Points", value: stats.totalPoints, sub: "earned", icon: Flame, color: "orange" },
   ];
+
+  const colorMap = {
+    emerald: { bg: "bg-emerald-500", light: "bg-emerald-50", text: "text-emerald-600", ring: "ring-emerald-100" },
+    blue: { bg: "bg-blue-500", light: "bg-blue-50", text: "text-blue-600", ring: "ring-blue-100" },
+    purple: { bg: "bg-purple-500", light: "bg-purple-50", text: "text-purple-600", ring: "ring-purple-100" },
+    orange: { bg: "bg-orange-500", light: "bg-orange-50", text: "text-orange-600", ring: "ring-orange-100" },
+  };
 
   const formatDate = (date) => {
     if (!date) return "";
-
-    return new Date(date).toLocaleDateString([], {
-      month: "short",
-      day: "numeric",
-    });
+    return new Date(date).toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
@@ -149,113 +94,86 @@ function Dashboard({ refresh, setActivePage }) {
   if (!userId) return <div>Please login first.</div>;
 
   return (
-    <div className="space-y-7">
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-zinc-900 to-emerald-950 p-6 md:p-8 text-white shadow-2xl">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/30 blur-3xl" />
-        <div className="absolute -bottom-28 -left-28 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
+    <div className="space-y-5 md:space-y-7">
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] bg-gradient-to-br from-slate-950 via-zinc-900 to-emerald-950 p-5 md:p-8 text-white shadow-2xl">
+        <div className="absolute -right-16 -top-16 h-56 w-56 md:h-72 md:w-72 rounded-full bg-emerald-400/25 blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-blue-500/15 blur-3xl" />
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6 items-end">
           <div className="lg:col-span-2">
-            <p className="text-emerald-300 font-black tracking-wide">
-              {getGreeting()}, {user?.username || user?.name || "Athlete"}
+            <p className="text-emerald-400 font-black text-sm tracking-wide">
+              {getGreeting()}, {user?.username || user?.name || "Athlete"} 👋
             </p>
-
-            <h1 className="text-4xl md:text-6xl font-black mt-2 leading-tight">
-              Build your next streak.
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black mt-2 leading-tight">
+              Build your next<br className="hidden md:block" /> streak.
             </h1>
-
-            <p className="text-zinc-300 mt-4 max-w-xl">
-              Track your lifts, beat your records, and keep your training
-              momentum going.
+            <p className="text-zinc-400 mt-3 max-w-xl text-sm md:text-base">
+              Track your lifts, beat your records, and keep your training momentum going.
             </p>
 
-            <div className="flex flex-wrap gap-3 mt-6">
-              <div className="bg-white/10 border border-white/10 rounded-2xl px-5 py-3">
-                <p className="text-sm text-zinc-300 font-bold">Favorite</p>
-                <p className="text-2xl font-black">{stats.favoriteMuscle}</p>
+            <div className="flex flex-wrap gap-2 md:gap-3 mt-4 md:mt-6">
+              <div className="bg-white/10 border border-white/10 rounded-2xl px-4 py-2.5 md:px-5 md:py-3">
+                <p className="text-xs text-zinc-400 font-bold">Favorite</p>
+                <p className="text-lg md:text-2xl font-black">{stats.favoriteMuscle}</p>
               </div>
-
-              <div className="bg-white/10 border border-white/10 rounded-2xl px-5 py-3">
-                <p className="text-sm text-zinc-300 font-bold">Today Volume</p>
-                <p className="text-2xl font-black">
-                  {Number(stats.todayVolume || 0).toLocaleString()}
-                </p>
+              <div className="bg-white/10 border border-white/10 rounded-2xl px-4 py-2.5 md:px-5 md:py-3">
+                <p className="text-xs text-zinc-400 font-bold">Today Vol.</p>
+                <p className="text-lg md:text-2xl font-black">{Number(stats.todayVolume || 0).toLocaleString()}</p>
               </div>
-
-              <div className="bg-white/10 border border-white/10 rounded-2xl px-5 py-3">
-                <p className="text-sm text-zinc-300 font-bold">Best Lift</p>
-                <p className="text-2xl font-black">
-                  {stats.bestLift?.exercise
-                    ? `${stats.bestLift.weight} lbs`
-                    : "No PR yet"}
+              <div className="bg-white/10 border border-white/10 rounded-2xl px-4 py-2.5 md:px-5 md:py-3">
+                <p className="text-xs text-zinc-400 font-bold">Best Lift</p>
+                <p className="text-lg md:text-2xl font-black">
+                  {stats.bestLift?.exercise ? `${stats.bestLift.weight} lbs` : "No PR yet"}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-black/30 border border-white/10 rounded-[2rem] p-5 backdrop-blur-xl">
-            <p className="text-zinc-400 text-sm font-black">Now Training</p>
-
-            <h3 className="text-3xl font-black mt-2">
-              {recentWorkouts[0]?.muscleGroup || "Start Workout"}
+          <div className="bg-black/30 border border-white/10 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 backdrop-blur-xl">
+            <p className="text-zinc-400 text-xs font-black uppercase tracking-wider">Daily Goal</p>
+            <h3 className="text-2xl md:text-3xl font-black mt-2">
+              {recentWorkouts[0]?.muscleGroup || "Start Training"}
             </h3>
-
-            <p className="text-zinc-400 mt-2">
+            <p className="text-zinc-400 text-sm mt-1">
               {recentWorkouts[0]?.exercise
                 ? `Last: ${recentWorkouts[0].exercise}`
                 : "Log your first workout today."}
             </p>
-
-            <div className="mt-5 h-3 bg-white/10 rounded-full overflow-hidden">
+            <div className="mt-4 h-2.5 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-400 rounded-full"
-                style={{
-                  width: `${Math.min(100, stats.todayWorkouts * 25)}%`,
-                }}
+                className="h-full bg-emerald-400 rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(100, stats.todayWorkouts * 25)}%` }}
               />
             </div>
-
-            <p className="text-xs text-zinc-400 mt-2">
-              Daily goal progress: {Math.min(100, stats.todayWorkouts * 25)}%
+            <p className="text-xs text-zinc-500 mt-2">
+              {Math.min(100, stats.todayWorkouts * 25)}% of daily goal
             </p>
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Stat Cards */}
+      <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
         {loading ? (
-          <>
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
-            <CardSkeleton />
-          </>
+          <><CardSkeleton /><CardSkeleton /><CardSkeleton /><CardSkeleton /></>
         ) : (
           statCards.map((card) => {
             const Icon = card.icon;
-
+            const c = colorMap[card.color];
             return (
               <div
                 key={card.label}
-                className="group bg-gradient-to-br from-white to-gray-50 border rounded-[2rem] p-5 shadow-sm hover:shadow-xl transition hover:-translate-y-1"
+                className="bg-white border rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-5 shadow-sm hover:shadow-lg transition hover:-translate-y-0.5"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-gray-500 text-sm font-black">
-                      {card.label}
-                    </p>
-
-                    <p className="text-3xl md:text-4xl font-black mt-1">
-                      {card.value}
-                    </p>
-
-                    <p className="text-gray-400 text-sm font-bold mt-1">
-                      {card.sub}
-                    </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-gray-500 text-xs md:text-sm font-black">{card.label}</p>
+                    <p className="text-2xl md:text-4xl font-black mt-1 truncate">{card.value}</p>
+                    <p className="text-gray-400 text-xs md:text-sm font-bold mt-0.5">{card.sub}</p>
                   </div>
-
-                  <div className="h-12 w-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center group-hover:scale-110 transition">
-                    <Icon className="h-6 w-6" />
+                  <div className={`h-10 w-10 md:h-12 md:w-12 rounded-2xl ${c.bg} text-white flex items-center justify-center shrink-0`}>
+                    <Icon className="h-5 w-5 md:h-6 md:w-6" />
                   </div>
                 </div>
               </div>
@@ -264,62 +182,57 @@ function Dashboard({ refresh, setActivePage }) {
         )}
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white border rounded-[2rem] p-5 md:p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-5">
+      {/* Recent workouts + Quick actions */}
+      <section className="grid grid-cols-1 xl:grid-cols-3 gap-5 md:gap-6">
+        <div className="xl:col-span-2 bg-white border rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-4 md:mb-5">
             <div>
-              <h2 className="text-3xl font-black">Recent Workouts</h2>
-              <p className="text-gray-500">Your latest training activity.</p>
+              <h2 className="text-2xl md:text-3xl font-black">Recent Workouts</h2>
+              <p className="text-gray-500 text-sm">Your latest training activity.</p>
             </div>
-
-            <span className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-black flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Live
+            <span className="bg-emerald-100 text-emerald-700 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-black flex items-center gap-1.5">
+              <Activity className="h-3.5 w-3.5" /> Live
             </span>
           </div>
 
           {loading ? (
             <ListSkeleton rows={4} />
           ) : recentWorkouts.length === 0 ? (
-            <div className="bg-gray-50 border rounded-[2rem] p-10 text-center">
-              <Dumbbell className="h-14 w-14 mx-auto mb-3 text-slate-900" />
-
-              <h3 className="text-2xl font-black">No workouts yet</h3>
-
-              <p className="text-gray-500 mt-2">
-                Log your first workout to start building your dashboard.
-              </p>
+            <div className="bg-gray-50 border rounded-[1.5rem] md:rounded-[2rem] p-8 md:p-10 text-center">
+              <Dumbbell className="h-12 w-12 md:h-14 md:w-14 mx-auto mb-3 text-slate-300" />
+              <h3 className="text-xl md:text-2xl font-black">No workouts yet</h3>
+              <p className="text-gray-500 mt-2 text-sm">Log your first workout to start building your dashboard.</p>
+              <button
+                onClick={() => setActivePage?.("log")}
+                className="mt-4 px-5 py-3 rounded-2xl bg-slate-900 text-white font-black text-sm hover:bg-slate-800 transition"
+              >
+                Log First Workout
+              </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5 md:space-y-3">
               {recentWorkouts.map((workout) => (
                 <div
                   key={workout._id}
-                  className="bg-gray-50 border rounded-[2rem] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-gray-100 transition"
+                  className="bg-gray-50 border rounded-2xl p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-gray-100 transition"
                 >
-                  <div>
-                    <p className="text-xl font-black">{workout.exercise}</p>
-
-                    <p className="text-gray-500 text-sm">
-                      {workout.muscleGroup} • {formatDate(workout.createdAt)}
+                  <div className="min-w-0">
+                    <p className="text-lg md:text-xl font-black truncate">{workout.exercise}</p>
+                    <p className="text-gray-500 text-xs md:text-sm">
+                      {workout.muscleGroup} · {formatDate(workout.createdAt)}
                     </p>
                   </div>
-
-                  <div className="grid grid-cols-3 gap-2 w-full md:w-auto">
-                    <div className="bg-white border rounded-2xl p-3 text-center">
-                      <p className="text-xs text-gray-500 font-bold">Sets</p>
-                      <p className="font-black">{workout.sets}</p>
-                    </div>
-
-                    <div className="bg-white border rounded-2xl p-3 text-center">
-                      <p className="text-xs text-gray-500 font-bold">Weight</p>
-                      <p className="font-black">{workout.weight}</p>
-                    </div>
-
-                    <div className="bg-white border rounded-2xl p-3 text-center">
-                      <p className="text-xs text-gray-500 font-bold">Pts</p>
-                      <p className="font-black">{workout.points || 0}</p>
-                    </div>
+                  <div className="grid grid-cols-3 gap-2 w-full md:w-auto shrink-0">
+                    {[
+                      { label: "Sets", value: workout.sets },
+                      { label: "Wt", value: `${workout.weight}lb` },
+                      { label: "Pts", value: workout.points || 0 },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="bg-white border rounded-xl p-2 text-center">
+                        <p className="text-[10px] text-gray-500 font-bold">{label}</p>
+                        <p className="font-black text-sm">{value}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -327,75 +240,42 @@ function Dashboard({ refresh, setActivePage }) {
           )}
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-slate-950 text-white border border-slate-800 rounded-[2rem] p-6 shadow-xl">
-            <p className="text-emerald-300 font-black">Quick Actions</p>
-
-            <h2 className="text-3xl font-black mt-2">Start faster</h2>
-
-            <div className="grid gap-3 mt-5">
-              <button
-                onClick={() => setActivePage?.("log")}
-                className="text-left bg-white/10 border border-white/10 rounded-2xl p-4 hover:bg-white/20 transition"
-              >
-                <p className="font-black flex items-center gap-2">
-                  <Dumbbell className="h-5 w-5" />
-                  Log Workout
-                </p>
-
-                <p className="text-sm text-zinc-400">
-                  Record sets, reps, and PRs.
-                </p>
-              </button>
-
-              <button
-                onClick={() => setActivePage?.("templates")}
-                className="text-left bg-white/10 border border-white/10 rounded-2xl p-4 hover:bg-white/20 transition"
-              >
-                <p className="font-black flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5" />
-                  Use Template
-                </p>
-
-                <p className="text-sm text-zinc-400">
-                  Start a saved training plan.
-                </p>
-              </button>
-
-              <button
-                onClick={() => setActivePage?.("ai")}
-                className="text-left bg-white/10 border border-white/10 rounded-2xl p-4 hover:bg-white/20 transition"
-              >
-                <p className="font-black flex items-center gap-2">
-                  <Bot className="h-5 w-5" />
-                  AI Coach
-                </p>
-
-                <p className="text-sm text-zinc-400">
-                  Get training suggestions.
-                </p>
-              </button>
+        <div className="space-y-4 md:space-y-6">
+          <div className="bg-slate-950 text-white border border-slate-800 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-6 shadow-xl">
+            <p className="text-emerald-400 font-black text-xs uppercase tracking-wider">Quick Actions</p>
+            <h2 className="text-2xl md:text-3xl font-black mt-2">Start faster</h2>
+            <div className="grid gap-2.5 md:gap-3 mt-4 md:mt-5">
+              {[
+                { id: "log", Icon: Dumbbell, label: "Log Workout", sub: "Record sets, reps, and PRs." },
+                { id: "templates", Icon: ClipboardList, label: "Use Template", sub: "Start a saved training plan." },
+                { id: "ai", Icon: Bot, label: "AI Coach", sub: "Get training suggestions." },
+              ].map(({ id, Icon, label, sub }) => (
+                <button
+                  key={id}
+                  onClick={() => setActivePage?.(id)}
+                  className="text-left bg-white/[0.06] border border-white/10 rounded-2xl p-3.5 md:p-4 hover:bg-white/10 transition"
+                >
+                  <p className="font-black text-sm md:text-base flex items-center gap-2">
+                    <Icon className="h-4 w-4 md:h-5 md:w-5 text-emerald-400" />
+                    {label}
+                  </p>
+                  <p className="text-xs md:text-sm text-zinc-400 mt-0.5">{sub}</p>
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="bg-white border rounded-[2rem] p-6 shadow-xl">
-            <p className="text-gray-500 font-black flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Training Identity
+          <div className="bg-white border rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-6 shadow-xl">
+            <p className="text-gray-500 font-black text-xs flex items-center gap-2 uppercase tracking-wider">
+              <Target className="h-4 w-4" /> Training Identity
             </p>
-
-            <h2 className="text-3xl font-black mt-2">
-              {stats.favoriteMuscle === "No data"
-                ? "New Athlete"
-                : `${stats.favoriteMuscle} Focus`}
+            <h2 className="text-2xl md:text-3xl font-black mt-2">
+              {stats.favoriteMuscle === "No data" ? "New Athlete" : `${stats.favoriteMuscle} Focus`}
             </h2>
-
-            <p className="text-gray-500 mt-3">
-              Based on your logged workouts, this is your current strongest
-              training pattern.
+            <p className="text-gray-500 mt-2 text-sm">
+              Based on your logged workouts, this is your strongest training pattern.
             </p>
-
-            <div className="mt-5 h-3 rounded-full bg-gray-100 overflow-hidden">
+            <div className="mt-4 h-2.5 rounded-full bg-gray-100 overflow-hidden">
               <div className="h-full w-2/3 bg-slate-900 rounded-full" />
             </div>
           </div>
